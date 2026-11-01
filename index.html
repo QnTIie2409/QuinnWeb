@@ -1,189 +1,218 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="x-ua-compatible" content="ie=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bakery Shelf - AO3 Reader</title>
-    <!-- Link external toasted.css directly -->
-    <link rel="stylesheet" type="text/css" href="toasted.css" />
-    <style>
-      body {
-        margin: 0;
-        padding: 0;
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-      }
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="x-ua-compatible" content="ie=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bakery Shelf - AO3 Reader</title>
+  <!-- Link external toasted.css directly -->
+  <link rel="stylesheet" type="text/css" href="toasted.css" />
+  <style>
+    /* Minimal helper styles for the wrapper, shelf toolbar, and iframe reader */
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .shelf-nav {
+      position: sticky;
+      top: 0;
+      z-index: 9999;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 20px;
+      background: #f4eedd;
+      border-bottom: 2px solid #b8692a;
+      box-shadow: 0 4px 10px rgba(60, 28, 8, 0.15);
+      font-family: "Arial Rounded MT Bold", "Avenir Next", "Segoe UI", sans-serif;
+      font-size: 14px;
+      transition: transform 0.3s ease-in-out;
+      will-change: transform;
+    }
+    .shelf-nav.nav-hidden {
+      transform: translateY(-100%);
+    }
+    .shelf-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 800;
+      color: #5a2a0b;
+      font-size: 1.1em;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .shelf-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+    .shelf-controls select,
+    .shelf-controls input[type="text"] {
+      padding: 6px 12px;
+      border: 1px solid #c98a4a;
+      border-radius: 6px;
+      background: #fffdf6;
+      color: #3a2212;
+      font-size: 13px;
+      max-width: 100%;
+    }
+    .shelf-btn {
+      padding: 6px 14px;
+      border: none;
+      border-radius: 6px;
+      background: #fbe6a0;
+      color: #4a2a0c;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 0 #d6ae4c;
+      transition: transform 0.1s, background-color 0.1s;
+    }
+    .shelf-btn:hover {
+      background: #fde9a8;
+      transform: translateY(-1px);
+    }
+    .shelf-btn:active {
+      transform: translateY(1px);
+    }
+    #reader-frame {
+      width: 100%;
+      flex: 1;
+      border: none;
+      min-height: calc(100vh - 60px);
+      background: transparent;
+    }
+    #drop-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(58, 34, 18, 0.7);
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+      color: #fffdf6;
+      font-size: 24px;
+      font-weight: bold;
+      pointer-events: none;
+    }
+    @media (max-width: 600px) {
       .shelf-nav {
-        position: sticky;
-        top: 0;
-        z-index: 9999;
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        padding: 10px 20px;
-        background: #f4eedd;
-        border-bottom: 2px solid #b8692a;
-        box-shadow: 0 4px 10px rgba(60, 28, 8, 0.15);
-        font-family:
-          "Arial Rounded MT Bold", "Avenir Next", "Segoe UI", sans-serif;
-        font-size: 14px;
-      }
-      .shelf-brand {
-        display: flex;
-        align-items: center;
+        padding: 8px 12px;
         gap: 8px;
-        font-weight: 800;
-        color: #5a2a0b;
-        font-size: 1.1em;
-        cursor: pointer;
-        text-decoration: none;
       }
       .shelf-controls {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 10px;
+        gap: 6px;
+        width: 100%;
       }
       .shelf-controls select,
       .shelf-controls input[type="text"] {
-        padding: 6px 12px;
-        border: 1px solid #c98a4a;
-        border-radius: 6px;
-        background: #fffdf6;
-        color: #3a2212;
-        font-size: 13px;
+        flex: 1 1 120px;
+        font-size: 12px;
+        padding: 5px 8px;
       }
       .shelf-btn {
-        padding: 6px 14px;
-        border: none;
-        border-radius: 6px;
-        background: #fbe6a0;
-        color: #4a2a0c;
-        font-weight: bold;
-        cursor: pointer;
-        box-shadow: 0 2px 0 #d6ae4c;
-        transition:
-          transform 0.1s,
-          background-color 0.1s;
+        padding: 5px 10px;
+        font-size: 12px;
       }
-      .shelf-btn:hover {
-        background: #fde9a8;
-        transform: translateY(-1px);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Shelf Toolbar -->
+  <header class="shelf-nav" id="top-shelf">
+    <a href="?" class="shelf-brand" title="Home Library">
+      <span>🍞</span>
+      <span>Bakery Shelf</span>
+    </a>
+
+    <div class="shelf-controls">
+      <!-- Story Selector -->
+      <label for="story-select" style="color:#5a2a0b; font-weight:600;">Story:</label>
+      <select id="story-select">
+        <option value="">-- Choose Story --</option>
+        <option value="Revealing_in_a_Haze.html">Revealing in a Haze</option>
+        <option value="ToBeAlive.html">To Be Alive</option>
+        <option value="tony.html">Tony Stark Really Has No Idea Who This Kid Is</option>
+      </select>
+
+      <!-- Custom URL / file input -->
+      <input type="text" id="manual-url" placeholder="or filename / URL..." size="18" />
+      <button class="shelf-btn" id="load-btn">Load</button>
+
+      <!-- Open Local HTML file -->
+      <label class="shelf-btn" style="display:inline-block; margin:0; cursor:pointer;">
+        📂 Open
+        <input type="file" id="file-input" accept=".html,.htm" style="display:none;" />
+      </label>
+    </div>
+  </header>
+
+  <div id="drop-overlay">Drop HTML Story File Here</div>
+
+  <!-- Reader Frame where target HTML is displayed with toasted.css automatically injected -->
+  <iframe id="reader-frame" name="reader-frame" sandbox="allow-same-origin allow-scripts"></iframe>
+
+  <script>
+    const nav = document.getElementById('top-shelf');
+    const frame = document.getElementById('reader-frame');
+    const storySelect = document.getElementById('story-select');
+    const manualUrlInput = document.getElementById('manual-url');
+    const loadBtn = document.getElementById('load-btn');
+    const fileInput = document.getElementById('file-input');
+    const dropOverlay = document.getElementById('drop-overlay');
+
+    // Scroll tracking to hide nav on scroll down and reveal on scroll up
+    let lastScrollY = 0;
+    function handleScroll(currentScrollY) {
+      if (currentScrollY > lastScrollY && currentScrollY > 60) {
+        // Scrolling down -> hide
+        nav.classList.add('nav-hidden');
+      } else if (currentScrollY < lastScrollY) {
+        // Scrolling up -> show
+        nav.classList.remove('nav-hidden');
       }
-      .shelf-btn:active {
-        transform: translateY(1px);
+      lastScrollY = Math.max(0, currentScrollY);
+    }
+
+    // Attach scroll listener to main window
+    window.addEventListener('scroll', () => handleScroll(window.scrollY), { passive: true });
+
+    // Attach scroll listener to iframe window once loaded
+    function attachFrameScrollListener(targetDoc) {
+      if (!targetDoc || !targetDoc.defaultView) return;
+      targetDoc.defaultView.addEventListener('scroll', () => {
+        const docScroll = targetDoc.defaultView.scrollY || targetDoc.documentElement.scrollTop || 0;
+        handleScroll(docScroll);
+      }, { passive: true });
+    }
+
+    // 1. Injects <link rel="stylesheet" href="toasted.css"> and wrapper containers into loaded document
+    function applyToastedSkinToDoc(doc) {
+      if (!doc || !doc.head || !doc.body) return;
+
+      // Add link to toasted.css if not already present
+      const hasLink = Array.from(doc.querySelectorAll('link[rel="stylesheet"]')).some(link => 
+        (link.getAttribute('href') || '').includes('toasted.css')
+      );
+      if (!hasLink) {
+        const link = doc.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = 'toasted.css';
+        doc.head.appendChild(link);
       }
-      #reader-frame {
-        width: 100%;
-        flex: 1;
-        border: none;
-        min-height: calc(100vh - 60px);
-        background: transparent;
-      }
-      #drop-overlay {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(58, 34, 18, 0.7);
-        z-index: 10000;
-        align-items: center;
-        justify-content: center;
-        color: #fffdf6;
-        font-size: 24px;
-        font-weight: bold;
-        pointer-events: none;
-      }
-    </style>
-  </head>
-  <body>
-    <!-- Top Shelf Toolbar -->
-    <header class="shelf-nav">
-      <a href="?" class="shelf-brand" title="Home Library">
-        <span>🍞</span>
-        <span>Bakery Shelf</span>
-      </a>
 
-      <div class="shelf-controls">
-        <!-- Story Selector -->
-        <label for="story-select" style="color: #5a2a0b; font-weight: 600"
-          >Story:</label
-        >
-        <select id="story-select">
-          <option value="">-- Choose Story --</option>
-          <option value="Revealing_in_a_Haze.html">Revealing in a Haze</option>
-          <!-- Add your other HTML files here -->
-          <option value="tony.html">Tony Stark Really Has No Idea Who This Kid Is</option>
-          <option value="ToBeAlive.html">To Be Alive</option>
-        </select>
-
-        <!-- Custom URL / file input -->
-        <input
-          type="text"
-          id="manual-url"
-          placeholder="or filename / URL..."
-          size="20"
-        />
-        <button class="shelf-btn" id="load-btn">Load</button>
-
-        <!-- Open Local HTML file -->
-        <label
-          class="shelf-btn"
-          style="display: inline-block; margin: 0; cursor: pointer"
-        >
-          📂 Open File
-          <input
-            type="file"
-            id="file-input"
-            accept=".html,.htm"
-            style="display: none"
-          />
-        </label>
-      </div>
-    </header>
-
-    <div id="drop-overlay">Drop HTML Story File Here</div>
-
-    <!-- Reader Frame where target HTML is displayed with toasted.css automatically injected -->
-    <iframe
-      id="reader-frame"
-      name="reader-frame"
-      sandbox="allow-same-origin allow-scripts"
-    ></iframe>
-
-    <script>
-      const frame = document.getElementById("reader-frame");
-      const storySelect = document.getElementById("story-select");
-      const manualUrlInput = document.getElementById("manual-url");
-      const loadBtn = document.getElementById("load-btn");
-      const fileInput = document.getElementById("file-input");
-      const dropOverlay = document.getElementById("drop-overlay");
-
-      // 1. Injects <link rel="stylesheet" href="toasted.css"> and wrapper containers into loaded document
-      function applyToastedSkinToDoc(doc) {
-        if (!doc || !doc.head || !doc.body) return;
-
-        // Add link to toasted.css if not already present
-        const hasLink = Array.from(
-          doc.querySelectorAll('link[rel="stylesheet"]'),
-        ).some((link) =>
-          (link.getAttribute("href") || "").includes("toasted.css"),
-        );
-        if (!hasLink) {
-          const link = doc.createElement("link");
-          link.rel = "stylesheet";
-          link.type = "text/css";
-          link.href = "toasted.css";
-          doc.head.appendChild(link);
-        }
-
-        // Check if AO3 skin scaffolding already exists
-        if (!doc.getElementById("outer")) {
-          const bodyContent = doc.body.innerHTML;
-          doc.body.innerHTML = `
+      // Check if AO3 skin scaffolding already exists
+      if (!doc.getElementById('outer')) {
+        const bodyContent = doc.body.innerHTML;
+        doc.body.innerHTML = `
           <div id="outer" class="wrapper">
             <div id="inner">
               <div id="main" class="works-show">
@@ -196,109 +225,107 @@
             </div>
           </div>
         `;
-        }
       }
 
-      // 2. Load story from URL or relative path
-      async function loadStory(url, updateQuery = true) {
-        if (!url) return;
+      attachFrameScrollListener(doc);
+    }
 
-        if (updateQuery) {
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.set("story", url);
-          window.history.pushState({}, "", newUrl);
-        }
+    // 2. Load story from URL or relative path
+    async function loadStory(url, updateQuery = true) {
+      if (!url) return;
 
-        manualUrlInput.value = url;
-        if (Array.from(storySelect.options).some((opt) => opt.value === url)) {
-          storySelect.value = url;
-        } else {
-          storySelect.value = "";
-        }
-
-        try {
-          const response = await fetch(url);
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const html = await response.text();
-          renderHtmlInFrame(html);
-        } catch (err) {
-          // Fallback: set iframe src directly (e.g. for same-origin or live preview)
-          frame.src = url;
-          frame.onload = () => {
-            try {
-              applyToastedSkinToDoc(frame.contentDocument);
-            } catch (e) {
-              console.warn("Cross-origin frame restriction:", e);
-            }
-          };
-        }
+      if (updateQuery) {
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('story', url);
+        window.history.pushState({}, '', newUrl);
       }
 
-      // 3. Render raw HTML text inside the iframe
-      function renderHtmlInFrame(htmlString) {
-        const doc = frame.contentDocument || frame.contentWindow.document;
-        doc.open();
-        doc.write(htmlString);
-        doc.close();
-        applyToastedSkinToDoc(doc);
+      manualUrlInput.value = url;
+      if (Array.from(storySelect.options).some(opt => opt.value === url)) {
+        storySelect.value = url;
+      } else {
+        storySelect.value = "";
       }
 
-      // 4. Handle controls & initial query param
-      loadBtn.addEventListener("click", () => {
-        const target = manualUrlInput.value.trim() || storySelect.value;
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const html = await response.text();
+        renderHtmlInFrame(html);
+      } catch (err) {
+        // Fallback: set iframe src directly
+        frame.src = url;
+        frame.onload = () => {
+          try {
+            applyToastedSkinToDoc(frame.contentDocument);
+          } catch(e) {
+            console.warn("Cross-origin frame restriction:", e);
+          }
+        };
+      }
+    }
+
+    // 3. Render raw HTML text inside the iframe
+    function renderHtmlInFrame(htmlString) {
+      const doc = frame.contentDocument || frame.contentWindow.document;
+      doc.open();
+      doc.write(htmlString);
+      doc.close();
+      applyToastedSkinToDoc(doc);
+    }
+
+    // 4. Handle controls & initial query param
+    loadBtn.addEventListener('click', () => {
+      const target = manualUrlInput.value.trim() || storySelect.value;
+      if (target) loadStory(target);
+    });
+
+    storySelect.addEventListener('change', () => {
+      if (storySelect.value) loadStory(storySelect.value);
+    });
+
+    manualUrlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const target = manualUrlInput.value.trim();
         if (target) loadStory(target);
-      });
+      }
+    });
 
-      storySelect.addEventListener("change", () => {
-        if (storySelect.value) loadStory(storySelect.value);
-      });
+    // 5. Local file reader
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => renderHtmlInFrame(event.target.result);
+        reader.readAsText(file);
+      }
+    });
 
-      manualUrlInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          const target = manualUrlInput.value.trim();
-          if (target) loadStory(target);
-        }
-      });
+    // 6. Drag & drop support
+    window.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropOverlay.style.display = 'flex';
+    });
+    window.addEventListener('dragleave', (e) => {
+      if (e.clientX <= 0 || e.clientY <= 0) dropOverlay.style.display = 'none';
+    });
+    window.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropOverlay.style.display = 'none';
+      const file = e.dataTransfer.files[0];
+      if (file && (file.name.endsWith('.html') || file.name.endsWith('.htm'))) {
+        const reader = new FileReader();
+        reader.onload = (event) => renderHtmlInFrame(event.target.result);
+        reader.readAsText(file);
+      }
+    });
 
-      // 5. Local file reader
-      fileInput.addEventListener("change", (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (event) => renderHtmlInFrame(event.target.result);
-          reader.readAsText(file);
-        }
-      });
-
-      // 6. Drag & drop support
-      window.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        dropOverlay.style.display = "flex";
-      });
-      window.addEventListener("dragleave", (e) => {
-        if (e.clientX <= 0 || e.clientY <= 0)
-          dropOverlay.style.display = "none";
-      });
-      window.addEventListener("drop", (e) => {
-        e.preventDefault();
-        dropOverlay.style.display = "none";
-        const file = e.dataTransfer.files[0];
-        if (
-          file &&
-          (file.name.endsWith(".html") || file.name.endsWith(".htm"))
-        ) {
-          const reader = new FileReader();
-          reader.onload = (event) => renderHtmlInFrame(event.target.result);
-          reader.readAsText(file);
-        }
-      });
-
-      // On page load: check ?story=filename.html
-      window.addEventListener("DOMContentLoaded", () => {
-        const params = new URLSearchParams(window.location.search);
-        const initialStory = params.get("story") || "Revealing_in_a_Haze.html";
-        loadStory(initialStory, false);
-      });
-    </script>
-  </body>
+    // On page load: check ?story=filename.html
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      const initialStory = params.get('story') || 'Revealing_in_a_Haze.html';
+      loadStory(initialStory, false);
+    });
+  </script>
+</body>
 </html>
